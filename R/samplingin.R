@@ -223,7 +223,7 @@ createInterval = function(pop, method, strata, auxVar=NA, groupByVar=c("kdprov",
 #' @param pop pop dataframe
 #' @param alloc allocation dataframe
 #' @param nsampel variable on alloc df as allocation sample
-#' @param type type value for sample classification ('U' = Utama, 'P' = pengganti)
+#' @param type type value for sample classification ('U' = Primary Samples, 'P' = Secondary Samples)
 #' @param strata strata variable, must available on both pop and alloc dataframe
 #' @param ident group by on allocation dataframe
 #' @param implicitby variable used as implicit stratification
@@ -293,7 +293,10 @@ doSampling = function(pop, alloc, nsampel, type, strata=NULL, ident=c("kdprov","
     return()
   }
 
+  null_strata = 0
+
   if(is.null(strata)){
+    null_strata = 1
     pop = pop %>%
       mutate(tmp_strata = as.integer(1))
 
@@ -304,11 +307,23 @@ doSampling = function(pop, alloc, nsampel, type, strata=NULL, ident=c("kdprov","
   }
 
   if( !is.null(implicitby) ){
-    sortVar = c(ident, implicitby)
-    if(verbose) message("sort by:",ident,"and",implicitby,"\n")
+    sortVar = c(ident, strata, implicitby)
+    if(verbose){
+      if(!null_strata){
+        message("sort by: ",ident,", ",strata," and ",implicitby,"\n")
+      }else{
+        message("sort by: ",ident," and ",implicitby,"\n")
+      }
+    }
   }else{
-    sortVar = ident
-    if(verbose) message("no implicit stratification variable chosen, sort by: ",ident,"\n")
+    sortVar = c(ident, strata)
+    if(verbose){
+      if(!null_strata){
+        message("no implicit stratification variable chosen, sort by: ",ident," and ",strata,"\n")
+      }else{
+        message("no implicit stratification variable chosen, sort by: ",ident,"\n")
+      }
+    }
   }
 
   pop = pop %>%

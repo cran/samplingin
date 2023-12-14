@@ -25,7 +25,7 @@ doSampling(
 
 \item{nsampel}{variable on alloc df as allocation sample}
 
-\item{type}{type value for sample classification ('U' = Utama, 'P' = pengganti)}
+\item{type}{type value for sample classification ('U' = Primary Samples, 'P' = Secondary Samples)}
 
 \item{strata}{strata variable, must available on both pop and alloc dataframe}
 
