@@ -691,7 +691,7 @@ doSampling = function(pop, alloc, nsampel, type, strata=NULL, ident=c("kdprov","
                     # cat(nTemp," == ",as.numeric(ix), " == ", fs,"\n")
                     # Cek apakah BS terpilih lebih dari sekali
                     if(fs == last_fs){
-                      if(verbose) cat(lis[["ar"]],"\n")
+                      # if(verbose) cat(lis[["ar"]],"\n")
                       if(verbose) cat("ix: ",as.numeric(ix)," last_fs: ",last_fs," fs: ",fs,"\n")
                       if(verbose) cat("INDEX SAMA (ULANG)\n")
                       isUlang = TRUE
