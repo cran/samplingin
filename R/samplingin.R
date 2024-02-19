@@ -230,6 +230,7 @@ createInterval = function(pop, method, strata, auxVar=NA, groupByVar=c("kdprov",
 #' @param method method of sampling : `"systematic"` (the default) or `"pps"`
 #' @param auxVar auxiliary variable for pps sampling (`method = "pps"`)
 #' @param seed seed
+#' @param predetermined_rn predetermined random number variable on allocation dataframe, the default value is NULL, random number will be generated randomly
 #' @param verbose verbose (`TRUE` as default)
 #'
 #' @return list of population data (`"pop"`), selected samples (`"dsampel"`), and details of sampling process (`"rincian"`)
@@ -238,6 +239,8 @@ createInterval = function(pop, method, strata, auxVar=NA, groupByVar=c("kdprov",
 #'
 #' \donttest{
 #' library(samplingin)
+#' library(magrittr)
+#' library(dplyr)
 #'
 #' # PPS Sampling
 #' dtSampling_pps = doSampling(
@@ -279,9 +282,33 @@ createInterval = function(pop, method, strata, auxVar=NA, groupByVar=c("kdprov",
 #'
 #' # Details of sampling process
 #' rincian = dtSampling_sys$rincian
+#'
+#' #' Systematic Sampling with predetermined random number (predetermined_ar parameter)
+#'
+#' alokasi_dt_rn = alokasi_dt %>% rowwise() %>% mutate(ar = runif(n(),0,1))
+#'
+#' dtSampling_sys = doSampling(
+#'    pop = pop_dt
+#'    , alloc = alokasi_dt_rn
+#'    , nsampel = "n_primary"
+#'    , type = "U"
+#'    , ident = c("kdprov")
+#'    , method = "systematic"
+#'    , predetermined_rn = "ar"
+#'    , seed = 4321
+#' )
+#'
+#' # Population data with flag sample
+#' pop_dt = dtSampling_sys$pop
+#'
+#' # Selected Samples
+#' dsampel = dtSampling_sys$dsampel
+#'
+#' # Details of sampling process
+#' rincian = dtSampling_sys$rincian
 #' }
 doSampling = function(pop, alloc, nsampel, type, strata=NULL, ident=c("kdprov","kdkab"), implicitby = NULL, method="systematic",
-                      auxVar=NA, seed=1, verbose = TRUE){
+                      auxVar=NA, seed=1, predetermined_rn = NULL, verbose = TRUE){
   # Warning apabila syarat tidak terpenuhi
   if( length(method)==0 | length(method)>1 | !(method %in% c("systematic", "pps"))){
     stop("Please select one method. systematic or pps")
@@ -310,18 +337,18 @@ doSampling = function(pop, alloc, nsampel, type, strata=NULL, ident=c("kdprov","
     sortVar = c(ident, strata, implicitby)
     if(verbose){
       if(!null_strata){
-        message("sort by: ",ident,", ",strata," and ",implicitby,"\n")
+        message("sort by: ",paste(ident, collapse = ", "),", ",paste(strata, collapse = ", ")," and ",paste(implicitby, collapse = ", "),"\n")
       }else{
-        message("sort by: ",ident," and ",implicitby,"\n")
+        message("sort by: ",paste(ident, collapse = ", ")," and ",paste(implicitby, collapse = ", "),"\n")
       }
     }
   }else{
     sortVar = c(ident, strata)
     if(verbose){
       if(!null_strata){
-        message("no implicit stratification variable chosen, sort by: ",ident," and ",strata,"\n")
+        message("no implicit stratification variable chosen, sort by: ",paste(ident, collapse = ", ")," and ",paste(strata, collapse = ", "),"\n")
       }else{
-        message("no implicit stratification variable chosen, sort by: ",ident,"\n")
+        message("no implicit stratification variable chosen, sort by: ",paste(ident, collapse = ", "),"\n")
       }
     }
   }
@@ -347,6 +374,31 @@ doSampling = function(pop, alloc, nsampel, type, strata=NULL, ident=c("kdprov","
 
   # flagS = match("FLAGS", colnames(pop))
 
+  # filter out null allocation
+
+  alokasi_minus = alloc %>%
+    filter(eval(parse(text = nsampel)) < 0)
+
+  alokasi_nol = alloc %>%
+    filter(eval(parse(text = nsampel)) == 0)
+
+  if(verbose){
+    message("Negative allocation: ",nrow(alokasi_minus),"\n")
+
+    if(nrow(alokasi_minus)>0){
+      stop("Allocation cannot be negative")
+    }
+
+    message("Zero allocation: ",nrow(alokasi_nol),"\n")
+
+    if(nrow(alokasi_nol)>0){
+      message("Removing Zero allocation\n")
+    }
+  }
+
+  alloc = alloc %>%
+    filter(eval(parse(text = nsampel)) > 0)
+
   switch (method,
           "systematic" = {
             pop = createInterval(pop, method, strata, groupByVar = groupByVar)
@@ -354,7 +406,8 @@ doSampling = function(pop, alloc, nsampel, type, strata=NULL, ident=c("kdprov","
             # Rekap populasi berdasarkan group
             mRek = pop %>%
               group_by(.dots = groupByVar) %>%
-              summarise(npop = n())
+              summarise(npop = n()) %>%
+              ungroup()
 
             # Membuat rincian penarikan sampel seperti
             # alokasi sampel per group,
@@ -364,8 +417,9 @@ doSampling = function(pop, alloc, nsampel, type, strata=NULL, ident=c("kdprov","
             set.seed(seed)
 
             rincian = left_join(alloc, mRek, by=groupByVar) %>%
+              mutate_at(c("npop"), ~replace(., is.na(.), 0)) %>%
               mutate(
-                ar = runif(n(),0,1),
+                ar = ifelse(is.null(predetermined_rn), runif(n(),0,1), eval(parse(text = predetermined_rn))),
                 npop=ifelse(!is.na(npop),npop,0),
                 k = npop/eval(parse(text = nsampel)),
                 sisa=9999) %>%
@@ -478,7 +532,8 @@ doSampling = function(pop, alloc, nsampel, type, strata=NULL, ident=c("kdprov","
             # Membuat rekap hasil penarikan sampel
             rek = dsampel %>%
               group_by(.dots = groupByVar) %>%
-              summarise(jml=n())
+              summarise(jml=n()) %>%
+              ungroup()
 
             # Join rincian dengan hasil penarikan sampel
             rincian = left_join(rincian, rek) %>%
@@ -540,9 +595,10 @@ doSampling = function(pop, alloc, nsampel, type, strata=NULL, ident=c("kdprov","
               # seed digunakan untuk menetapkan angka random
               set.seed(seed)
               rincian = left_join(alloc, mRek, by=groupByVar) %>%
+                mutate_at(c("npop","numobs","ncertainty"), ~replace(., is.na(.), 0)) %>%
                 mutate(
-                  ar = runif(n(),0,1),
-                  k  = npop/eval(parse(text = nsampel)),
+                  ar = ifelse(is.null(predetermined_rn), runif(n(),0,1), eval(parse(text = predetermined_rn))),
+                  k  = ifelse(npop>0, npop/eval(parse(text = nsampel)), NA),
                   sisa=9999,
                   nsam = eval(parse(text = nsampel)) - ncertainty
                 )
@@ -590,13 +646,6 @@ doSampling = function(pop, alloc, nsampel, type, strata=NULL, ident=c("kdprov","
                   filter(!is.na(flags))
               }
             }
-
-            rincian = rincian %>%
-              mutate(
-                sisa = ifelse(is.na(nsam), nsam_tot, sisa)
-                , nsam = ifelse(is.na(nsam), nsam_tot, nsam)
-              ) %>%
-              mutate_at(c("npop"), ~replace(., is.na(.), 0))
 
             # Proses penarikan sampel per rincian alokasi
             for(i in 1:nrow(rincian)){
@@ -731,10 +780,13 @@ doSampling = function(pop, alloc, nsampel, type, strata=NULL, ident=c("kdprov","
             # Membuat rekap hasil penarikan sampel
             rek = dsampel %>%
               group_by(.dots = groupByVar) %>%
-              summarise(jml=n())
+              summarise(jml=n()) %>%
+              ungroup()
 
-            # Join rincian dengan hasil penarikan sampel
+            # Join rincian dengan hasil penarikan sampel dan update variabel sisa
             rincian = left_join(rincian, rek) %>%
+              mutate_at(c("jml"), ~replace(., is.na(.), 0)) %>%
+              mutate(sisa = eval(parse(text = nsampel)) - jml) %>%
               as.data.frame()
 
             pop = pop %>%

@@ -15,6 +15,7 @@ doSampling(
   method = "systematic",
   auxVar = NA,
   seed = 1,
+  predetermined_rn = NULL,
   verbose = TRUE
 )
 }
@@ -39,6 +40,8 @@ doSampling(
 
 \item{seed}{seed}
 
+\item{predetermined_rn}{predetermined random number variable on allocation dataframe, the default value is NULL, random number will be generated randomly}
+
 \item{verbose}{verbose (\code{TRUE} as default)}
 }
 \value{
@@ -51,6 +54,8 @@ Samples selection using systematic or PPS (Probability Proportional to Size) sam
 
 \donttest{
 library(samplingin)
+library(magrittr)
+library(dplyr)
 
 # PPS Sampling
 dtSampling_pps = doSampling(
@@ -81,6 +86,30 @@ dtSampling_sys = doSampling(
    , type = "U"
    , ident = c("kdprov")
    , method = "systematic"
+   , seed = 4321
+)
+
+# Population data with flag sample
+pop_dt = dtSampling_sys$pop
+
+# Selected Samples
+dsampel = dtSampling_sys$dsampel
+
+# Details of sampling process
+rincian = dtSampling_sys$rincian
+
+#' Systematic Sampling with predetermined random number (predetermined_ar parameter)
+
+alokasi_dt_rn = alokasi_dt \%>\% rowwise() \%>\% mutate(ar = runif(n(),0,1))
+
+dtSampling_sys = doSampling(
+   pop = pop_dt
+   , alloc = alokasi_dt_rn
+   , nsampel = "n_primary"
+   , type = "U"
+   , ident = c("kdprov")
+   , method = "systematic"
+   , predetermined_rn = "ar"
    , seed = 4321
 )
 
