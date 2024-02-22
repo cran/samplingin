@@ -98,9 +98,9 @@ dsampel = dtSampling_sys$dsampel
 # Details of sampling process
 rincian = dtSampling_sys$rincian
 
-#' Systematic Sampling with predetermined random number (predetermined_ar parameter)
+# Systematic Sampling with predetermined random number (predetermined_rn parameter)
 
-alokasi_dt_rn = alokasi_dt \%>\% rowwise() \%>\% mutate(ar = runif(n(),0,1))
+alokasi_dt_rn = alokasi_dt \%>\% rowwise() \%>\% mutate(ar = runif(n(),0,1)) \%>\% ungroup
 
 dtSampling_sys = doSampling(
    pop = pop_dt

@@ -1,5 +1,5 @@
 # samplingin
-Repository for testing samplingin package
+https://cranlogs.r-pkg.org/badges/grand-total/samplingin
 
 ## Overview
 samplingin is a robust solution employing both systematic and PPS (Probability Proportional to Size) sampling methods, ensuring a methodical and representative selection of data. 
@@ -19,6 +19,7 @@ install.packages("samplingin")
 ``` r
 library(samplingin)
 library(magrittr)
+library(dplyr)
 
 contoh_alokasi = alokasi_dt %>%
     dplyr::select(-n_primary) %>%
@@ -30,8 +31,6 @@ alokasi_dt = get_allocation(
     , group = c("nasional")
     , pop_var = "jml_kabkota"
  )
-
-library(samplingin)
 
 # PPS Sampling 
 dtSampling_pps = doSampling(
@@ -62,6 +61,29 @@ dtSampling_sys = doSampling(
     , type = "U"
     , ident = c("kdprov")
     , method = "systematic"
+    , seed = 4321
+)
+
+# Population data with flag sample
+pop_dt = dtSampling_sys$pop
+
+# Selected Samples
+dsampel = dtSampling_sys$dsampel
+
+# Details of sampling process
+rincian = dtSampling_sys$rincian
+
+# Systematic Sampling with predetermined random number (predetermined_rn parameter)
+alokasi_dt_rn = alokasi_dt %>% rowwise() %>% mutate(ar = runif(n(),0,1)) %>% ungroup
+
+dtSampling_sys = doSampling(
+    pop = pop_dt
+    , alloc = alokasi_dt_rn
+    , nsampel = "n_primary"
+    , type = "U"
+    , ident = c("kdprov")
+    , method = "systematic"
+    , predetermined_rn = "ar"
     , seed = 4321
 )
 

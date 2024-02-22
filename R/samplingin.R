@@ -283,9 +283,9 @@ createInterval = function(pop, method, strata, auxVar=NA, groupByVar=c("kdprov",
 #' # Details of sampling process
 #' rincian = dtSampling_sys$rincian
 #'
-#' #' Systematic Sampling with predetermined random number (predetermined_ar parameter)
+#' # Systematic Sampling with predetermined random number (predetermined_rn parameter)
 #'
-#' alokasi_dt_rn = alokasi_dt %>% rowwise() %>% mutate(ar = runif(n(),0,1))
+#' alokasi_dt_rn = alokasi_dt %>% rowwise() %>% mutate(ar = runif(n(),0,1)) %>% ungroup
 #'
 #' dtSampling_sys = doSampling(
 #'    pop = pop_dt
@@ -418,11 +418,13 @@ doSampling = function(pop, alloc, nsampel, type, strata=NULL, ident=c("kdprov","
 
             rincian = left_join(alloc, mRek, by=groupByVar) %>%
               mutate_at(c("npop"), ~replace(., is.na(.), 0)) %>%
+              rowwise() %>%
               mutate(
                 ar = ifelse(is.null(predetermined_rn), runif(n(),0,1), eval(parse(text = predetermined_rn))),
                 npop=ifelse(!is.na(npop),npop,0),
                 k = npop/eval(parse(text = nsampel)),
                 sisa=9999) %>%
+              ungroup() %>%
               as.data.frame()
 
             # Proses penarikan sampel per rincian alokasi
@@ -537,6 +539,7 @@ doSampling = function(pop, alloc, nsampel, type, strata=NULL, ident=c("kdprov","
 
             # Join rincian dengan hasil penarikan sampel
             rincian = left_join(rincian, rek) %>%
+              mutate_at(c("jml"), ~replace(., is.na(.), 0)) %>%
               as.data.frame()
 
             pop = pop %>%
@@ -553,6 +556,21 @@ doSampling = function(pop, alloc, nsampel, type, strata=NULL, ident=c("kdprov","
 
               dsampel = dsampel %>%
                 select(-tmp_strata)
+            }
+
+            sisa = rincian %>%
+              summarise(sum(sisa, na.rm=T)) %>%
+              pull()
+
+            total = alloc %>%
+              summarise(sum(eval(parse(text = nsampel)), na.rm=T))
+
+            persentase = round((dsampel %>% nrow) * 100.0/total, 2)
+
+            if(sisa>0){
+              message("WARNING: There are still ",sisa," allocations for which samples have not been selected. Selected ", dsampel %>% nrow," out of ", total," (",persentase,"%)\n")
+            }else{
+              if(verbose) message("All allocations have been selected. Selected ", dsampel %>% nrow," out of ", total," (",persentase,"%)\n")
             }
 
             # Return value
@@ -596,12 +614,15 @@ doSampling = function(pop, alloc, nsampel, type, strata=NULL, ident=c("kdprov","
               set.seed(seed)
               rincian = left_join(alloc, mRek, by=groupByVar) %>%
                 mutate_at(c("npop","numobs","ncertainty"), ~replace(., is.na(.), 0)) %>%
+                rowwise() %>%
                 mutate(
                   ar = ifelse(is.null(predetermined_rn), runif(n(),0,1), eval(parse(text = predetermined_rn))),
                   k  = ifelse(npop>0, npop/eval(parse(text = nsampel)), NA),
                   sisa=9999,
                   nsam = eval(parse(text = nsampel)) - ncertainty
-                )
+                ) %>%
+                ungroup() %>%
+                as.data.frame()
 
               # certainty selected (filter auxVar yang lebih dari atau sama dengan interval)
               certainty_pop = pop %>%
@@ -803,6 +824,21 @@ doSampling = function(pop, alloc, nsampel, type, strata=NULL, ident=c("kdprov","
 
               dsampel = dsampel %>%
                 select(-tmp_strata)
+            }
+
+            sisa = rincian %>%
+              summarise(sum(sisa, na.rm=T)) %>%
+              pull()
+
+            total = alloc %>%
+              summarise(sum(eval(parse(text = nsampel)), na.rm=T))
+
+            persentase = round((dsampel %>% nrow) * 100.0/total, 2)
+
+            if(sisa>0){
+              message("WARNING: There are still ",sisa," allocations for which samples have not been selected. Selected ", dsampel %>% nrow," out of ", total," (",persentase,"%)\n")
+            }else{
+              if(verbose) message("All allocations have been selected. Selected ", dsampel %>% nrow," out of ", total," (",persentase,"%)\n")
             }
 
             # Return value
