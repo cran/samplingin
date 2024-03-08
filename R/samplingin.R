@@ -189,7 +189,7 @@ createInterval = function(pop, method, strata, auxVar=NA, groupByVar=c("kdprov",
             mRek = mRek %>% group_by(.dots = groupByVar) %>%
               mutate(
                 VMAX = ifelse(!is.na(!!rlang::parse_quo(strata, env = caller_env())), row_number(), 0),
-                VMIN = ifelse(!is.na(!!rlang::parse_quo(strata, env = caller_env())), as.integer(VMAX), 0)) %>%
+                VMIN = ifelse(!is.na(!!rlang::parse_quo(strata, env = caller_env())), as.numeric(VMAX), 0)) %>%
               ungroup %>%
               mutate(INDEX = row_number())
 
@@ -207,7 +207,7 @@ createInterval = function(pop, method, strata, auxVar=NA, groupByVar=c("kdprov",
               mutate(VMAX = ifelse(!is.na(!!rlang::parse_quo(strata, env = caller_env())) & is.na(certainty),
                                    cumsum(eval(parse(text=auxVar)) * is.na(certainty)), 0),
                      VMIN = ifelse(!is.na(!!rlang::parse_quo(strata, env = caller_env())) & is.na(certainty),
-                                   as.integer(VMAX - eval(parse(text=auxVar)) + 1), 0) ) %>%
+                                   as.numeric(VMAX - eval(parse(text=auxVar)) + 1), 0) ) %>%
               ungroup %>%
               mutate(INDEX = row_number())
 
@@ -670,11 +670,11 @@ doSampling = function(pop, alloc, nsampel, type, strata=NULL, ident=c("kdprov","
 
             # Proses penarikan sampel per rincian alokasi
             for(i in 1:nrow(rincian)){
-              if(rincian[i,nsampel] == 0) next
+              if(rincian[i,"nsam"] == 0) next
 
               # Apabila populasinya ternyata 0, maka variabel sisa = alokasi
-              if(rincian[i,"npop"] == 0){
-                rincian[i,"sisa"] = rincian[i, nsampel]
+              if(rincian[i,"numobs"] == 0){
+                rincian[i,"sisa"] = rincian[i, "nsam"]
                 next
               }
 
@@ -700,6 +700,7 @@ doSampling = function(pop, alloc, nsampel, type, strata=NULL, ident=c("kdprov","
                 # Membuat list variabel pelengkap lainnya
                 lis[[strata]]  = rincian[i,strata]
                 lis[[nsampel]] = rincian[i,nsampel]
+                lis$nsam = rincian[i,"nsam"]
                 lis$npop    = rincian[i,"npop"]
                 lis$numobs  = rincian[i,"numobs"]
                 lis$ar      = rincian[i,"ar"]
@@ -748,11 +749,18 @@ doSampling = function(pop, alloc, nsampel, type, strata=NULL, ident=c("kdprov","
 
                 # Apabila jumlah alokasi lebih dari populasi,
                 # maka revisi alokasi
-                if(lis[[nsampel]] > nrow(y)){
-                  stop("Alokasi Berlebih, cek alokasi == (",lis[[1]],") ", lis[[nsampel]]," ",nrow(y))
-                  return()
+                if(lis[["nsam"]] > nrow(y)){
+                  txt_rincian = ""
+                  for(ggi in 1:length(groupByVar)){
+                    txt_rincian = paste(txt_rincian, lis[[ groupByVar[ggi] ]])
+                  }
+
+                  if(verbose) cat("Excess Allocation, check ==> (",txt_rincian,") || Allocation: ", lis[["nsam"]]," :: Selected Sample: ",nrow(y), "\n")
+                  # return()
+
+                  st = y
                 }else{
-                  while(nTemp<as.numeric(lis[[nsampel]]) & !isUlang){
+                  while(nTemp<as.numeric(lis[["nsam"]]) & !isUlang){
                     fs = y %>%
                       filter(as.numeric(ceiling(ix))>=VMIN & as.numeric(ceiling(ix))<=VMAX) %>%
                       select(INDEX) %>%
@@ -763,7 +771,7 @@ doSampling = function(pop, alloc, nsampel, type, strata=NULL, ident=c("kdprov","
                     if(fs == last_fs){
                       # if(verbose) cat(lis[["ar"]],"\n")
                       if(verbose) cat("ix: ",as.numeric(ix)," last_fs: ",last_fs," fs: ",fs,"\n")
-                      if(verbose) cat("INDEX SAMA (ULANG)\n")
+                      if(verbose) cat("SAME INDEX (REPEAT PPS Sampling)\n")
                       isUlang = TRUE
                     } else {
                       last_fs = fs
