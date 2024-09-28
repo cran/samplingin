@@ -1,6 +1,6 @@
 Package: samplingin
 Title: Dynamic Survey Sampling Solutions
-Version: 1.1.0
+Version: 1.1.1
 Authors@R: 
     person("Choerul", "Afifanto", , "choerulafifanto@gmail.com", role = c("aut", "cre", "cph"))
 Description: A robust solution employing the SRS (Simple Random Sampling),
@@ -17,8 +17,8 @@ Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.2.1
 NeedsCompilation: no
-Packaged: 2024-05-11 03:02:07 UTC; User
+Packaged: 2024-09-27 23:51:47 UTC; User
 Author: Choerul Afifanto [aut, cre, cph]
 Maintainer: Choerul Afifanto <choerulafifanto@gmail.com>
 Repository: CRAN
-Date/Publication: 2024-05-11 08:50:09 UTC
+Date/Publication: 2024-09-28 00:20:02 UTC

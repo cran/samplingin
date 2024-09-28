@@ -1,6 +1,10 @@
-# samplingin 1.1.0
+# samplingin 1.1.1
 
-# samplingin 1.0.8
+Changes in version 1.1.1
+
+Bug fixes
+
+* Resolving the issue of mismatched allocation on get_allocation
 
 # samplingin 1.1.0
 

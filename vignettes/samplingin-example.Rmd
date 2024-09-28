@@ -380,7 +380,8 @@ alokasi_prov = alokasi_dt %>%
 
 alokasi_prov %>% head(10)
 
-alokasi_prov %>% summarise(sum(init_alloc))
+alokasi_prov %>% 
+  summarise(sum(init_alloc))
 
 alokasi_kab = pop_dt %>%
   left_join(alokasi_prov) %>%
@@ -390,4 +391,18 @@ alokasi_kab = pop_dt %>%
 alokasi_kab %>% head(10)
 
 alokasi_kab %>% summarise(sum(n_primary))
+
+alokasi_kab %>% 
+  group_by(kdprov) %>% 
+  summarise(sum(n_primary))
+
+# check 
+
+all.equal(
+  alokasi_prov, alokasi_kab %>% 
+  group_by(kdprov) %>% 
+  summarise(init_alloc=sum(n_primary)) %>% 
+  ungroup() %>% 
+  as.data.frame()
+)
 ```

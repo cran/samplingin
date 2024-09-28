@@ -90,9 +90,11 @@ get_allocation = function(data, n_alloc, group, pop_var = "jml", secondary = 0){
       group_by(across(all_of(group))) %>%
       mutate(sfsqrt = sum(fsqrt)) %>%
       ungroup() %>%
+      rowwise() %>%
       mutate(
         alokasi_n = eval(parse(text = n_alloc))
-      )
+      ) %>%
+      ungroup()
   }
 
   if( is.na(pop_var) ){
